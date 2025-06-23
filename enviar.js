@@ -9,7 +9,7 @@ async function enviarScript(scriptText) {
     const main = document.querySelector("#main");
     const textarea = main?.querySelector('div[contenteditable="true"]');
 
-    if (!textarea) throw new Error("Não há uma conversa aberta");
+    if (!textarea) throw new Error("No hay una conversacion abierta");
 
     for (const line of lines) {
         console.log("Enviando:", line);
