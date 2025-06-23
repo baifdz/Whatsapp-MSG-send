@@ -28,11 +28,11 @@ async function enviarScript(scriptText) {
                 console.warn("No se encontró el botón de enviar");
             }
             resolve();
-        }, 100));
+        }, 1));//Espera 1 milisegundos (0.001s) antes de hacer clic en el botón de enviar (antes 100)
 
         // Espera antes de enviar el siguiente mensaje (excepto el último)
         if (lines.indexOf(line) !== lines.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 250));
+            await new Promise(resolve => setTimeout(resolve, 1));// espera 1 milisegundos (0.001s) antes de pasar al siguiente mensaje. (antes 250)
         }
     }
 
