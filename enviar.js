@@ -1,45 +1,52 @@
 async function enviarScript(scriptText) {
-    // Limpia y divide el texto en líneas válidas
+    // Divide por saltos de línea reales y limpia espacios vacíos
     const lines = scriptText
-        .split(/[\n\t]+/)
+        .split('\n')
         .map(line => line.trim())
-        .filter(line => line);
+        .filter(line => line.length > 0);
 
-    // Selecciona el área principal del chat y el campo de texto
     const main = document.querySelector("#main");
     const textarea = main?.querySelector('div[contenteditable="true"]');
 
-    if (!textarea) throw new Error("No hay una conversacion abierta");
+    if (!textarea) throw new Error("No hay una conversación abierta");
 
     for (const line of lines) {
         console.log("Enviando:", line);
 
-        // Escribe el mensaje
         textarea.focus();
-        document.execCommand('insertText', false, line);
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // REEMPLAZO DE EXECOMMAND: Inserta el texto directamente en el nodo de texto
+        textarea.textContent = line;
+        
+        // Simula la escritura real para que la app detecte el texto introducido
+        textarea.dispatchEvent(new InputEvent('input', { bubbles: true }));
 
-        // Espera un poco y envía el mensaje
-        await new Promise(resolve => setTimeout(() => {
-            const sendButton = main.querySelector('button[aria-label="Enviar"]');
-            if (sendButton) {
-                sendButton.click();
-            } else {
-                console.warn("No se encontró el botón de enviar");
-            }
-            resolve();
-        }, 1));//Espera 1 milisegundos (0.001s) antes de hacer clic en el botón de enviar (antes 100)
+        // Espera de seguridad (100ms mínimo recomendados para evitar bloqueos del navegador)
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Espera antes de enviar el siguiente mensaje (excepto el último)
-        if (lines.indexOf(line) !== lines.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1));// espera 1 milisegundos (0.001s) antes de pasar al siguiente mensaje. (antes 250)
+        const sendButton = main.querySelector('span[data-icon="send"]') || main.querySelector('button[aria-label="Enviar"]');
+        
+        if (sendButton) {
+            sendButton.click();
+        } else {
+            // Alternativa si el botón falla: Simular la tecla Enter
+            textarea.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Enter',
+                keyCode: 13,
+                code: 'Enter',
+                which: 13,
+                bubbles: true
+            }));
         }
+
+        // Pausa entre mensajes para evitar baneos de spam o saturación del script
+        await new Promise(resolve => setTimeout(resolve, 250));
     }
 
     return lines.length;
 }
 
-// Ejecutar con texto de prueba
+// Ejecución de prueba
 enviarScript(`
 Hola 👋
 Este es un mensaje automatizado enviado por JavaScript.
