@@ -5,34 +5,46 @@ async function enviarScript(scriptText) {
         .map(line => line.trim())
         .filter(line => line);
 
-    // Selecciona el área principal del chat y el campo de texto
-    const main = document.querySelector("#main");
-    const textarea = main?.querySelector('div[contenteditable="true"]');
+    // Selector robusto para el nuevo editor Lexical de WhatsApp Web
+    const textarea = document.querySelector('div[contenteditable="true"][role="textbox"]') || 
+                     document.querySelector('div[contenteditable="true"][data-lexical-editor="true"]');
 
-    if (!textarea) throw new Error("No hay una conversacion abierta");
+    if (!textarea) throw new Error("No hay una conversación abierta o no se encontró el cuadro de texto.");
 
-    for (const line of lines) {
-        console.log("Enviando:", line);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        console.log(`[${i + 1}/${lines.length}] Enviando:`, line);
 
-        // Escribe el mensaje
+        // 1. Enfoca el área y escribe el mensaje usando execCommand (aún compatible con Lexical para inyectar texto)
         textarea.focus();
         document.execCommand('insertText', false, line);
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
-        // Espera un poco y envía el mensaje
-        await new Promise(resolve => setTimeout(() => {
-            const sendButton = main.querySelector('button[aria-label="Enviar"]');
-            if (sendButton) {
-                sendButton.click();
-            } else {
-                console.warn("No se encontró el botón de enviar");
-            }
-            resolve();
-        }, 1));//Espera 1 milisegundos (0.001s) antes de hacer clic en el botón de enviar (antes 100)
+        // 2. Espera a que React actualice el DOM y cambie el botón de voz por el de enviar
+        // (1 ms es insuficiente para el ciclo de renderizado; 250-300 ms es el punto óptimo)
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Espera antes de enviar el siguiente mensaje (excepto el último)
-        if (lines.indexOf(line) !== lines.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1));// espera 1 milisegundos (0.001s) antes de pasar al siguiente mensaje. (antes 250)
+        // 3. Busca el botón de enviar (por etiqueta o por el ícono de envío interior)
+        const sendButton = document.querySelector('button[aria-label="Enviar"]') || 
+                           document.querySelector('button span[data-icon="send"]')?.closest('button');
+
+        if (sendButton) {
+            sendButton.click();
+        } else {
+            // Plan B: Si por alguna razón no encuentra el botón, simula presionar la tecla Enter
+            console.warn("No se encontró el botón de enviar, intentando enviar con Enter...");
+            textarea.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Enter',
+                code: 'Enter',
+                keyCode: 13,
+                which: 13,
+                bubbles: true
+            }));
+        }
+
+        // 4. Espera antes de enviar el siguiente mensaje para evitar bloqueos de spam o desorden
+        if (i !== lines.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 400));
         }
     }
 
